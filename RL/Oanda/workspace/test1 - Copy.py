@@ -57,7 +57,7 @@ def getHistory( instrument, granularity, dateFrom, dateTo ):
 	for r in InstrumentsCandlesFactory( instrument = instrument, params = params ):
 		api.request( r )
 		for i in range( 0, len( r.response["candles"] ) ):
-			print( r.response["candles"][i]["ask"] )
+			print( r.response["candles"][i]["time"] )
 		#print( len( r.response["candles"] ) )
 
 
