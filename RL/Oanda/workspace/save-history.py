@@ -24,8 +24,8 @@ def main():
 	#print( r.response["time"], type(r.response["time"]) )
 	#print( float(r.response["prices"][0]["asks"][0]["price"]) )
 
-	dateFrom = "2008-01-01T00:00:00Z"
-	dateTo = "2018-01-01T00:00:00Z"
+	dateFrom = "2018-01-01T00:00:00Z"
+	dateTo = "2018-02-14T00:00:00Z"
 	count = 5000
 	granularity = "M15"
 	freq = "15Min"		#Pandas freq for series
