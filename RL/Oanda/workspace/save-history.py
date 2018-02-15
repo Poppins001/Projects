@@ -24,12 +24,13 @@ def main():
 	#print( r.response["time"], type(r.response["time"]) )
 	#print( float(r.response["prices"][0]["asks"][0]["price"]) )
 
-	dateFrom = "2017-01-03T00:00:00Z"
-	dateTo = "2017-01-04T00:00:00Z"
+	dateFrom = "2008-01-01T00:00:00Z"
+	dateTo = "2018-01-01T00:00:00Z"
+	count = 5000
 	granularity = "M15"
 	freq = "15Min"		#Pandas freq for series
 
-	getHistory( "EUR_USD", granularity, dateFrom, dateTo, freq )
+	getHistory( "EUR_USD", granularity, dateFrom, dateTo, count, freq )
 
 
 	# params2 = { "from": dateFrom, "to": dateTo, "granularity": granularity, } #"from": dateFrom, "granularity": granularity, "count": 5000
@@ -51,7 +52,8 @@ def authAPI():
 		token = fp.read().strip()
 	return accountID, token
 
-def getHistory( instrument, granularity, dateFrom, dateTo, freq ):
+def getHistory( instrument, granularity, dateFrom, dateTo, count, freq ):
+	rawData = []
 	history = []
 	historyOpen = []
 	historyHigh = []
@@ -60,27 +62,41 @@ def getHistory( instrument, granularity, dateFrom, dateTo, freq ):
 	accountID, token = authAPI()
 	api = API( access_token = token )
 
-	params = { "from": dateFrom, "to": dateTo, "granularity": granularity, }
+	params = { "from": dateFrom, "to": dateTo, "count": count, "granularity": granularity, }
 
 	for r in InstrumentsCandlesFactory( instrument = instrument, params = params ):
 		api.request( r )
+		#for i in range( 0, len(r.response) ):
+		#print( r.response["candles"] )
+		rawData.extend( r.response["candles"] )
+		dfRaw = pd.DataFrame.from_records( rawData )
+
+		#print( len(dfRaw) )
+		'''
 		for i in range( 0, len( r.response["candles"] ) ):
 			history.append( r.response["candles"][i]["mid"] )
-		#print( len( r.response["candles"] ) )
+		print( len( r.response["candles"] ) )
+		'''
+	#sHistory = pd.Series( history, index = pd.date_range( start = dateFrom, periods= len(history), freq = freq ))
 
+	#for i in range( 0, len( history ) ):
+		#historyOpen.append( sHistory.values[i]["o"] )	#add open values to list
+		#historyHigh.append( sHistory.values[i]["h"] )	#add high values to list
+		#historyLow.append( sHistory.values[i]["l"] )	#add low values to list
+		#historyClose.append( sHistory.values[i]["c"] )	#add close values to list
 
-	sHistory = pd.Series( history, index = pd.date_range( start = dateFrom, periods= len(history), freq = freq ))
+	for i in range( 0, len( dfRaw ) ):
+		historyOpen.append( dfRaw["mid"][i]["o"] )	#add open values to list
+		historyHigh.append( dfRaw["mid"][i]["h"] )	#add high values to list
+		historyLow.append( dfRaw["mid"][i]["l"] )	#add low values to list
+		historyClose.append( dfRaw["mid"][i]["c"] )	#add close values to list
 
-	for i in range( 0, len( history ) ):
-		historyOpen.append( sHistory.values[i]["o"] )	#add open values to list
-		historyHigh.append( sHistory.values[i]["h"] )	#add high values to list
-		historyLow.append( sHistory.values[i]["l"] )	#add low values to list
-		historyClose.append( sHistory.values[i]["c"] )	#add close values to list
-
+	#print( historyClose )
 	#print( historyOpen[0], historyHigh[0], historyLow[0], historyClose[0] )
 
-	dfHistory = pd.DataFrame( { "open": historyOpen, "high": historyHigh, "low": historyLow, "close": historyClose },
-	 							index = pd.date_range( start = dateFrom, periods= len(history), freq = freq ) )
+	dfHistory = pd.DataFrame( { "open": historyOpen, "high": historyHigh, "low": historyLow, "close": historyClose }, )
+								#index = dfRaw["time"] )
+								#index = pd.date_range( start = dateFrom, periods= len(dfRaw), freq = freq ) )
 	#print( dfHistory )
 
 	macdHistory, histHistory = MACD( dfHistory.close, fast = 12, slow = 26, signal = 9 )
@@ -106,11 +122,20 @@ def getHistory( instrument, granularity, dateFrom, dateTo, freq ):
 	dfHistory["ma10"] = ma10			#add ma10 to DataFrame
 	dfHistory["ma50"] = ma50			#add ma50 to DataFrame
 
-	print( dfHistory.index )
+	#print( dfHistory.index )
 
+	strFrom = dateFrom.replace( ":", "_" )
+	strTo = dateTo.replace( ":", "_" )
 
+	fname = "./historical-data/" + str(instrument) + "-" + str(granularity) + "-" + strFrom + "to" + strTo
 
-'''-----------------------------------END MAIN-------------------------------'''
+	dfHistory.to_pickle( path = fname )
+
+	dfPickled = pd.read_pickle( path = fname )
+
+	#print( dfPickled.tail(1) )
+	print( dfPickled )
+
 #returns series, slowEMA - fastEMA and histogram; EMA of MACD
 def MACD( series, fast, slow, signal ):
     slowEMA = series.ewm( span = slow ).mean()
