@@ -20,7 +20,7 @@ class ENV1_NAME( gym.Env ):
     '''
     dataFile = "..\..\..\Oanda\workspace\historical-data\EUR_USD-M15-2008-01-01T00_00_00Zto2018-01-01T00_00_00Z"
 
-    def __init__( self, lengthDay = 96, transCost = 0.03 ):
+    def __init__( self, lengthDay = 96, transCost = 0.003 ):
         '''setup the environment'''
         self.action_space = spaces.Discrete( 4 ) #model output dim
         self.observation_space = spaces.Discrete( 11 ) #model input dim
@@ -72,6 +72,21 @@ class ENV1_NAME( gym.Env ):
     def _step( self, action ):
         assert self.action_space.contains( action )
         '''increment action on environment. Returns new state, reward and observations'''
+        priceNow = self.state["close"]
+        #check if at end of day 'done'
+        if self.indexDay >= self.lengthDay:
+            done = True
+            if self.position > 0:
+                #close buy
+                self.plDay += priceNow - self.openPrice
+                reward += priceNow - self.openPrice
+                reward -= self.transCost
+            elif self.position < 0:
+                #close sell
+                self.plDay += priceNow - self.closePrice
+                reward += priceNow - self.closePrice
+                reward -= self.transCost
+
         if action == 0:
             #open buy
         elif action == 1:
@@ -82,6 +97,7 @@ class ENV1_NAME( gym.Env ):
             #do nothing
 
         '''reward and new state'''
+        return np.array( self.state ), reward, done, {}
 
     def _reset( self ):
 
